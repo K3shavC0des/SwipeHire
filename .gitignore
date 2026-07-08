@@ -1,0 +1,21 @@
+# Python
+__pycache__/
+*.pyc
+venv/
+.venv/
+*.egg-info/
+
+# CS50 / Flask
+instance/
+*.sqlite
+*.db
+
+# Secrets — CRITICAL
+.env
+config.py
+schema.txt
+
+
+# OS
+.DS_Store
+Thumbs.db
