@@ -1,0 +1,18 @@
+{% extends "layout.html" %}
+
+{% block body %}
+    <h1>
+        Upload Resume
+    </h1>
+
+    <form action="/add_resume" method="post" enctype="multipart/form-data">
+        <div>
+            <input name="name" type="text" autofocus autocomplete="off" placeholder="Resume Name">
+            <input name="role" type="text" autocomplete="off" placeholder="Role">
+        </div>
+        <div>
+            <input name="resume" type="file" accept=".pdf,.docx">
+        </div>
+        <button name="submit">Upload</button>
+    </form>
+{% endblock %}

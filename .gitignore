@@ -19,3 +19,6 @@ schema.txt
 # OS
 .DS_Store
 Thumbs.db
+
+# Uploads
+static/uploads/

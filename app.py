@@ -1,16 +1,18 @@
 import os
+import uuid
 
 from flask import Flask, redirect, render_template, request, session
 from flask_session import Session
 from werkzeug.security import generate_password_hash
-from helpers import loginRequired, get_db
+from werkzeug.utils import secure_filename
+from helpers import loginRequired, get_db, parse_pdf, parse_docx
 
 app = Flask(__name__)
 app.config["SESSION_PERMANENT"] = False
 app.config["SESSION_TYPE"] = "filesystem"
 app.secret_key = os.urandom(24)
-Session(app) 
-
+app.config["UPLOAD_FOLDER"] = "static/uploads"
+Session(app)
 
 
 @app.route("/")
@@ -47,6 +49,10 @@ def registerPage():
         return redirect("/login")
     else:
         return render_template("register.html")
+
+@app.route("/add_resume")
+def addResume():
+    pass
 
 
 @app.route("/swipe")
