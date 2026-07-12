@@ -2,6 +2,17 @@
 
 {% block body %}
     <h1>
-       Register Page
+       Register!
     </h1>
+    <br>
+    <form action="/register" method="post">
+        <div>
+            <input name="name" type="text" autofocus autocomplete="off" placeholder="Username">
+            <input name="ps1" type="text" autofocus autocomplete="off" placeholder="Enter Password">
+        </div>
+        <div>
+            <input name="ps2" type="text" autofocus autocomplete="off" placeholder="Enter Password Again">
+        </div>
+        <button name="submit">Login</button>
+    </form>
 {% endblock %}
