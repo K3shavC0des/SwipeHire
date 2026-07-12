@@ -1,9 +1,57 @@
-SwipeHire
-Tinder for resumes. CS50 Final Project → FastAPI + React MVP.
+# SwipeHire
 
-Stack
-Flask + SQLite (CS50 version)
-FastAPI + PostgreSQL + React + scikit-learn (post-CS50)
-Status
-In development.
+A web application that simulates the recruiter experience — users create accounts, browse resumes in a Tinder-style interface, and swipe to accept or reject candidates. Built as the final project for [CS50](https://cs50.harvard.edu/).
 
+## Features
+
+- **User registration & authentication** — secure password hashing with Werkzeug
+- **Resume swiping** — view resumes and make quick hiring decisions
+- **Leaderboard** — track which resumes rank highest
+- **Session management** — server-side sessions via Flask-Session
+
+## Tech Stack
+
+- **Backend:** Python, Flask, SQLite
+- **Frontend:** Jinja2 templates, Bootstrap 5
+- **Security:** Werkzeug password hashing
+
+## Setup
+
+1. **Clone the repository**
+
+2. **Create a virtual environment and install dependencies**
+   ```bash
+   pip install -r requirements.txt
+   ```
+
+3. **Run the application**
+   ```bash
+   flask run
+   ```
+
+## Database Schema
+
+| Table     | Columns |
+|-----------|---------|
+| **users** | id, username, hash |
+| **resumes** | id, user_id (FK), name, role, content, created_at |
+| **swipes** | id, user_id (FK), resume_id (FK), decision, created_at |
+
+## Project Structure
+
+```
+├── app.py              # Flask application and routes
+├── helpers.py          # Database connection, auth decorator
+├── swipehire.db        # SQLite database
+├── schema.txt          # Schema reference
+├── requirements.txt    # Python dependencies
+├── static/             # Static assets
+└── templates/          # Jinja2 templates
+    ├── layout.html     # Base layout with Bootstrap nav
+    ├── index.html      # Homepage
+    ├── register.html   # Registration form
+    ├── login.html      # Login form
+    ├── swipe.html      # Swipe interface
+    ├── leaderboard.html# Rankings
+    └── error.html      # Error display
+```
