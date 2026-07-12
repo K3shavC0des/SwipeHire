@@ -24,9 +24,14 @@ def homepage():
 def loginPage():
     return render_template("login.html")
 
-
+@app.route("/logout")
+def logout():
+    session.clear()
+    return redirect("/")
+    
 @app.route("/register", methods=["GET", "POST"])
 def registerPage():
+    
     if request.method == "POST":
         potUsername = request.form.get("username")
         ps1 = request.form.get("ps1")
@@ -42,11 +47,12 @@ def registerPage():
         if ps1 != ps2:
             return render_template("error.html", error="Please ensure the two passwords match", pageLink="/register")
 
-        db.execute("INSERT INTO users (username, hash) VALUES (?, ?)", (potUsername, generate_password_hash(ps1)))
+        cursor = db.execute("INSERT INTO users (username, hash) VALUES (?, ?)", (potUsername, generate_password_hash(ps1)))
         db.commit()
+        session["user_id"] = cursor.lastrowid
         db.close()
-
-        return redirect("/login")
+        return redirect("/")
+        
     else:
         return render_template("register.html")
 
