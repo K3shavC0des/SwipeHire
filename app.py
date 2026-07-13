@@ -3,9 +3,9 @@ import uuid
 
 from flask import Flask, redirect, render_template, request, session
 from flask_session import Session
-from werkzeug.security import generate_password_hash
+from werkzeug.security import check_password_hash, generate_password_hash
 from werkzeug.utils import secure_filename
-from helpers import loginRequired, get_db, parse_pdf, parse_docx
+from helpers import loginRequired, parse_pdf, parse_docx, dbe, allowed_file, get_extension
 
 app = Flask(__name__)
 app.config["SESSION_PERMANENT"] = False
@@ -22,7 +22,17 @@ def homepage():
 
 @app.route("/login", methods=["GET", "POST"])
 def loginPage():
-    return render_template("login.html")
+    if request.method == "GET":
+        return render_template("login.html")
+    else:
+        username = request.form.get("username").lower().strip()
+        password = request.form.get("password").lower().strip()
+        rows = dbe("SELECT * FROM users WHERE username = ?", (username,))
+        for row in rows:
+            if check_password_hash(row["hash"], password):
+                session["user_id"] = row["id"]
+                return redirect("/")
+        return render_template("error.html", error="Invalid username or password", pageLink="/login")
 
 @app.route("/logout")
 def logout():
@@ -33,13 +43,12 @@ def logout():
 def registerPage():
     
     if request.method == "POST":
-        potUsername = request.form.get("username")
-        ps1 = request.form.get("ps1")
-        ps2 = request.form.get("ps2")
+        potUsername = request.form.get("username").lower().strip()
+        ps1 = request.form.get("ps1").lower().strip()
+        ps2 = request.form.get("ps2").lower().strip()
         if not ps1 or not ps2 or not potUsername:
             return render_template("error.html", error="Please fill out the values", pageLink="/register")
-        db = get_db()
-        rows = db.execute("SELECT username FROM users").fetchall()
+        rows = dbe("SELECT username FROM users")
         for row in rows:
             if row["username"] == potUsername:
                 return render_template("error.html", error="Username Already Exists :(", pageLink="/register")
@@ -47,18 +56,41 @@ def registerPage():
         if ps1 != ps2:
             return render_template("error.html", error="Please ensure the two passwords match", pageLink="/register")
 
-        cursor = db.execute("INSERT INTO users (username, hash) VALUES (?, ?)", (potUsername, generate_password_hash(ps1)))
-        db.commit()
-        session["user_id"] = cursor.lastrowid
-        db.close()
+        dbe("INSERT INTO users (username, hash) VALUES (?, ?)", (potUsername, generate_password_hash(ps1)))
+        session["user_id"] = dbe("SELECT id FROM users WHERE username = ?", (potUsername,))[0]["id"]
         return redirect("/")
         
     else:
         return render_template("register.html")
 
-@app.route("/add_resume")
+@app.route("/add_resume", methods=["GET", "POST"])
+@loginRequired
 def addResume():
-    pass
+    if request.method == "GET": return render_template("resume_upload.html")
+    else:
+        name = request.form.get("name")
+        role = request.form.get("role")
+        file = request.files["resume"]
+        f = file.filename
+
+        if not name or not role or not f or not allowed_file(f):
+            return render_template("error.html", error="Invalid input or file type", pageLink="/add_resume")
+
+        extension = get_extension(f)
+        unique_name = str(uuid.uuid4()) + "." + extension
+        file_path = os.path.join(app.config["UPLOAD_FOLDER"], unique_name)
+        file.save(file_path)
+
+        if extension == "pdf":
+            content = parse_pdf(file_path)
+        else:
+            content = parse_docx(file_path)
+
+        dbe("INSERT INTO resumes (user_id, name, role, content, file_path) VALUES (?, ?, ?, ?, ?)",
+            (session["user_id"], name, role, content, file_path))
+
+        return redirect("/")
+
 
 
 @app.route("/swipe")
@@ -70,3 +102,10 @@ def swipePage():
 @loginRequired
 def leaderboardPage():
     return render_template("leaderboard.html")
+
+@app.route("/profile", methods=["GET", "POST"])
+@loginRequired
+def profilePage():
+    if request.method == "GET":
+        username = dbe("SELECT username FROM users WHERE id = ?", (session["user_id"],))[0]["username"]
+        return render_template("profile.html", ProfileName=username)

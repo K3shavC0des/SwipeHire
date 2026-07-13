@@ -30,9 +30,13 @@ def parse_pdf(filepath):
 def allowed_file(filename):
     if not "." in filename:
         return False
-    extension = filename.rsplit(".", 1)[1].lower()
+    extension = get_extension(filename)
     isValid = extension in ALLOWED_EXTENSIONS
     return isValid
+
+def get_extension(f):
+    extension = f.rsplit(".", 1)[1].lower()
+    return extension
 
 def loginRequired(f):
     @wraps(f)
@@ -40,5 +44,12 @@ def loginRequired(f):
         if session.get("user_id") is None:
             return render_template("error.html", error = "Please Login", pageLink = "/")
         return f(*args, **kwargs)
-    
     return login_required
+
+def dbe(query, params=()):
+    db = get_db()
+    cursor = db.execute(query, params)
+    db.commit()
+    rows = cursor.fetchall()
+    db.close()
+    return rows
