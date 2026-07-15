@@ -58,9 +58,9 @@ html, body {
 }
 
 .features {
-    margin: auto 100px;
-    flex: auto;
-    justify-content: center;
+    max-width: 720px;
+    margin: 0 auto;
+    padding: 0 24px;
 }
 
 .features .col {

@@ -115,16 +115,6 @@ def resumeView(resume_id):
 def swipePage():
     return render_template("swipe.html")
 
-
-@app.route("/profile")
-@loginRequired
-def profilePage():
-    rows = dbe("SELECT username FROM users WHERE id = ?", (session["user_id"],))
-    username = rows[0]["username"] if rows else "Unknown"
-    resumes = dbe("SELECT id, name, role, created_at FROM resumes WHERE user_id = ? ORDER BY created_at DESC", (session["user_id"],))
-    return render_template("profile.html", ProfileName=username, resumes=resumes)
-
-
 @app.route("/api/next-resume")
 @loginRequired
 def nextResume():
