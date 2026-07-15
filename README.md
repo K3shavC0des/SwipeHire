@@ -24,7 +24,14 @@ A web application that simulates the recruiter experience — users create accou
    pip install -r requirements.txt
    ```
 
-3. **Run the application**
+3. **(Optional) Seed sample resumes**
+   Place `.pdf` or `.docx` files in `static/uploads/`, then run:
+   ```bash
+   python seed_resumes.py
+   ```
+   This creates dummy user accounts for each resume (password: `password`) and imports their parsed content into the database.
+
+4. **Run the application**
    ```bash
    flask run
    ```
@@ -42,10 +49,12 @@ A web application that simulates the recruiter experience — users create accou
 ```
 ├── app.py              # Flask application and routes
 ├── helpers.py          # Database connection, auth decorator
+├── seed_resumes.py     # Import resume files into the database
 ├── swipehire.db        # SQLite database
 ├── schema.txt          # Schema reference
 ├── requirements.txt    # Python dependencies
-├── static/             # Static assets
+├── static/
+│   └── uploads/        # Place resume files here for seeding
 └── templates/          # Jinja2 templates
     ├── layout.html     # Base layout with Bootstrap nav
     ├── index.html      # Homepage

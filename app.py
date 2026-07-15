@@ -1,7 +1,7 @@
 import os
 import uuid
 
-from flask import Flask, jsonify, redirect, render_template, request, session
+from flask import Flask, jsonify, redirect, render_template, request, session, send_file, Response
 from flask_session import Session
 from werkzeug.security import check_password_hash, generate_password_hash
 from werkzeug.utils import secure_filename
@@ -94,6 +94,15 @@ def addResume():
 
 
 
+@app.route("/resume/<int:resume_id>")
+def resumeView(resume_id):
+    rows = dbe("SELECT file_path FROM resumes WHERE id = ?", (resume_id,))
+    if not rows:
+        return "Resume not found", 404
+    resp = send_file(rows[0]["file_path"])
+    resp.headers.pop("Content-Disposition", None)
+    return resp
+
 @app.route("/swipe")
 @loginRequired
 def swipePage():
@@ -126,7 +135,8 @@ def nextResume():
 
     if rows:
         r = rows[0]
-        return jsonify({"id": r["id"], "name": r["name"], "role": r["role"], "file_path": r["file_path"]})
+        file_path = "/" + r["file_path"]
+        return jsonify({"id": r["id"], "name": r["name"], "role": r["role"], "file_path": file_path})
     return jsonify({"done": True})
 
 
@@ -138,4 +148,10 @@ def swipe():
     decision = data["decision"]
     dbe("INSERT INTO swipes (user_id, resume_id, decision) VALUES (?, ?, ?)",
         (session["user_id"], resume_id, decision))
+    return jsonify({"ok": True})
+
+@app.route("/api/reset-swipes", methods=["POST"])
+@loginRequired
+def resetSwipes():
+    dbe("DELETE FROM swipes WHERE user_id = ?", (session["user_id"],))
     return jsonify({"ok": True})
