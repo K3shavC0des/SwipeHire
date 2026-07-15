@@ -1,7 +1,127 @@
-{% extends "layout.html" %}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SwipeHire</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        html, body { width: 100%; height: 100%; overflow: hidden; background: #000; color: #fff; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; }
 
-{% block body %}
-    <h1>
-        Swipe Page!
-    </h1>
-{% endblock %}
+        #countdown {
+            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+            background: #000; display: flex; align-items: center; justify-content: center;
+            flex-direction: column; z-index: 100;
+        }
+        #countdown-num {
+            font-size: 160px; font-weight: 800;
+            animation: pop 0.7s ease-out;
+        }
+        #countdown-label {
+            font-size: 24px; color: #888; letter-spacing: 4px; text-transform: uppercase;
+        }
+        @keyframes pop {
+            0% { transform: scale(2.5); opacity: 0; }
+            60% { transform: scale(0.9); opacity: 1; }
+            100% { transform: scale(1); opacity: 1; }
+        }
+        .hide { opacity: 0; transition: opacity 0.3s; pointer-events: none; }
+
+        #resume-frame {
+            width: 100%; height: calc(100% - 90px); border: none;
+        }
+        #actions {
+            height: 90px; display: flex; align-items: center; justify-content: center; gap: 50px;
+            background: #111;
+        }
+        .btn {
+            font-size: 18px; font-weight: 700; padding: 14px 44px; border: none; border-radius: 50px;
+            cursor: pointer; letter-spacing: 1px; transition: transform 0.12s;
+        }
+        .btn:active { transform: scale(0.93); }
+        .btn-reject { background: #dc2626; color: #fff; }
+        .btn-interview { background: #059669; color: #fff; }
+
+        #done {
+            display: none; width: 100%; height: 100%;
+            align-items: center; justify-content: center; flex-direction: column; gap: 16px;
+        }
+        #done h1 { font-size: 40px; }
+        #done p { color: #888; font-size: 18px; }
+        #done a { color: #3b82f6; font-size: 16px; text-decoration: none; }
+    </style>
+</head>
+<body>
+
+<div id="countdown">
+    <div id="countdown-num">3</div>
+    <div id="countdown-label">Get Ready</div>
+</div>
+
+<div style="display:none" id="swipe-ui">
+    <iframe id="resume-frame"></iframe>
+    <div id="actions">
+        <button class="btn btn-reject" onclick="swipe('reject')">Reject</button>
+        <button class="btn btn-interview" onclick="swipe('interview')">Interview</button>
+    </div>
+</div>
+
+<div id="done">
+    <h1>All caught up!</h1>
+    <p>No more resumes to review.</p>
+    <a href="/">Back to Home</a>
+</div>
+
+<script>
+let currentId = null;
+
+async function nextResume() {
+    let r = await fetch('/api/next-resume');
+    let data = await r.json();
+    if (data.done) {
+        document.getElementById('swipe-ui').style.display = 'none';
+        document.getElementById('done').style.display = 'flex';
+        return;
+    }
+    currentId = data.id;
+    document.getElementById('resume-frame').src = data.file_path;
+}
+
+async function swipe(decision) {
+    if (!currentId) return;
+    await fetch('/api/swipe', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ resume_id: currentId, decision })
+    });
+    nextResume();
+}
+
+// countdown
+let nums = [3, 2, 1], i = 0;
+let numEl = document.getElementById('countdown-num');
+let labelEl = document.getElementById('countdown-label');
+
+function tick() {
+    if (i < nums.length) {
+        numEl.textContent = nums[i];
+        labelEl.textContent = nums[i] === 1 ? 'Go!' : 'Get Ready';
+        numEl.style.animation = 'none';
+        void numEl.offsetHeight;
+        numEl.style.animation = 'pop 0.7s ease-out';
+        i++;
+        setTimeout(tick, 850);
+    } else {
+        document.getElementById('countdown').classList.add('hide');
+        setTimeout(() => {
+            document.getElementById('countdown').style.display = 'none';
+            document.getElementById('swipe-ui').style.display = 'block';
+            nextResume();
+        }, 350);
+    }
+}
+tick();
+</script>
+
+</body>
+</html>

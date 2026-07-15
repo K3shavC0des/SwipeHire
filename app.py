@@ -1,7 +1,7 @@
 import os
 import uuid
 
-from flask import Flask, redirect, render_template, request, session
+from flask import Flask, jsonify, redirect, render_template, request, session
 from flask_session import Session
 from werkzeug.security import check_password_hash, generate_password_hash
 from werkzeug.utils import secure_filename
@@ -13,6 +13,7 @@ app.config["SESSION_TYPE"] = "filesystem"
 app.secret_key = os.urandom(24)
 app.config["UPLOAD_FOLDER"] = "static/uploads"
 Session(app)
+
 
 
 @app.route("/")
@@ -109,3 +110,32 @@ def profilePage():
     if request.method == "GET":
         username = dbe("SELECT username FROM users WHERE id = ?", (session["user_id"],))[0]["username"]
         return render_template("profile.html", ProfileName=username)
+
+
+@app.route("/api/next-resume")
+@loginRequired
+def nextResume():
+    swiped = dbe("SELECT resume_id FROM swipes WHERE user_id = ?", (session["user_id"],))
+    swiped_ids = [row["resume_id"] for row in swiped]
+
+    if swiped_ids:
+        placeholders = ",".join("?" * len(swiped_ids))
+        rows = dbe(f"SELECT id, name, role, file_path FROM resumes WHERE id NOT IN ({placeholders})", swiped_ids)
+    else:
+        rows = dbe("SELECT id, name, role, file_path FROM resumes")
+
+    if rows:
+        r = rows[0]
+        return jsonify({"id": r["id"], "name": r["name"], "role": r["role"], "file_path": r["file_path"]})
+    return jsonify({"done": True})
+
+
+@app.route("/api/swipe", methods=["POST"])
+@loginRequired
+def swipe():
+    data = request.get_json()
+    resume_id = data["resume_id"]
+    decision = data["decision"]
+    dbe("INSERT INTO swipes (user_id, resume_id, decision) VALUES (?, ?, ?)",
+        (session["user_id"], resume_id, decision))
+    return jsonify({"ok": True})
