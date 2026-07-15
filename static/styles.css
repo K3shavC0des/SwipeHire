@@ -8,7 +8,7 @@ html, body {
 
 /* ===== Navbar ===== */
 .navbar {
-    box-shadow: 0 1px 4px rgba(0,0,0,.06);
+    box-shadow: 0 1px 4px rgba(22, 22, 22, 0.06);
 }
 
 .navbar-brand {
@@ -58,7 +58,9 @@ html, body {
 }
 
 .features {
-    padding: 60px 0;
+    margin: auto 100px;
+    flex: auto;
+    justify-content: center;
 }
 
 .features .col {
