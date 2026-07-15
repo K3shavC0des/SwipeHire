@@ -1,0 +1,24 @@
+{% extends "layout.html" %}
+
+{% block body %}
+<div class="profile-card">
+    <h2>Profile: {{ ProfileName }}</h2>
+
+    <h5 style="margin-top:28px;">Your Uploaded Resumes</h5>
+    {% if resumes %}
+        <div class="resume-list">
+        {% for r in resumes %}
+            <div class="resume-item">
+                <div>
+                    <strong>{{ r.name }}</strong>
+                    <span class="meta"> &mdash; {{ r.role }}</span>
+                </div>
+                <a href="/resume/{{ r.id }}" target="_blank" class="btn btn-sm btn-outline-primary">View</a>
+            </div>
+        {% endfor %}
+        </div>
+    {% else %}
+        <p class="text-muted">You haven't uploaded any resumes yet.</p>
+    {% endif %}
+</div>
+{% endblock %}
