@@ -1,18 +1,14 @@
 {% extends "layout.html" %}
 
 {% block body %}
-    <h1>
-       Register!
-    </h1>
-    <br>
+<div class="form-container">
+    <h2>Create Account</h2>
     <form action="/register" method="post">
-        <div>
-            <input name="username" type="text" autofocus autocomplete="off" placeholder="Username">
-            <input name="ps1" type="password" autocomplete="off" placeholder="Enter Password">
-        </div>
-        <div>
-            <input name="ps2" type="password" autocomplete="off" placeholder="Enter Password Again">
-        </div>
-        <button name="submit">Register</button>
+        <input name="username" type="text" placeholder="Username" autofocus autocomplete="off" required>
+        <input name="ps1" type="password" placeholder="Password" autocomplete="off" required>
+        <input name="ps2" type="password" placeholder="Confirm password" autocomplete="off" required>
+        <button type="submit">Register</button>
     </form>
+    <p class="alt-link">Already have an account? <a href="/login">Log In</a></p>
+</div>
 {% endblock %}

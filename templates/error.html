@@ -1,9 +1,8 @@
 {% extends "layout.html" %}
 
 {% block body %}
-<h1>
-    Error: {{ error }}
-</h1>
-
-<a href= " {{  pageLink }}" >Back</a>
+<div class="error-box">
+    <h1>{{ error }}</h1>
+    <a href="{{ pageLink }}">Go back</a>
+</div>
 {% endblock %}

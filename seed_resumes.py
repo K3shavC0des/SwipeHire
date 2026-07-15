@@ -2,7 +2,6 @@ import os
 import random
 import sqlite3
 from PyPDF2 import PdfReader
-from docx import Document
 from werkzeug.security import generate_password_hash
 
 UPLOAD_FOLDER = "static/uploads"
@@ -44,24 +43,14 @@ def parse_pdf(filepath):
     with open(filepath, "rb") as f:
         reader = PdfReader(f)
         for page in reader.pages:
-            text += page.extract_text()
+            text += page.extract_text() or ""
     return text
-
-
-def parse_docx(filepath):
-    file = Document(filepath)
-    text = "\n".join(p.text for p in file.paragraphs)
-    return text
-
-
-def get_extension(filename):
-    return filename.rsplit(".", 1)[1].lower()
 
 
 def allowed_file(filename):
     if "." not in filename:
         return False
-    return get_extension(filename) in {"pdf", "docx"}
+    return filename.rsplit(".", 1)[1].lower() == "pdf"
 
 
 def generate_unique_username(base, existing):
@@ -74,17 +63,14 @@ def generate_unique_username(base, existing):
 
 
 def main():
-    # Collect existing usernames and file paths
     existing_usernames = {row["username"] for row in dbe("SELECT username FROM users")}
     existing_paths = {row["file_path"] for row in dbe("SELECT file_path FROM resumes")}
 
-    # Scan uploads folder
     if not os.path.isdir(UPLOAD_FOLDER):
         print(f"Folder '{UPLOAD_FOLDER}' not found.")
         return
 
     files = [f for f in os.listdir(UPLOAD_FOLDER) if allowed_file(f)]
-
     new_files = [f for f in files if os.path.join(UPLOAD_FOLDER, f) not in existing_paths]
 
     if not new_files:
@@ -99,26 +85,18 @@ def main():
     for filename in new_files:
         file_path = os.path.join(UPLOAD_FOLDER, filename)
 
-        # Generate random name
         first = random.choice(FIRST_NAMES)
         last = random.choice(LAST_NAMES)
         full_name = f"{first} {last}"
         username_base = f"{first.lower()}.{last.lower()}"
         username = generate_unique_username(username_base, existing_usernames)
 
-        # Create dummy user
         dbe("INSERT INTO users (username, hash) VALUES (?, ?)", (username, password_hash))
         user_id = dbe("SELECT id FROM users WHERE username = ?", (username,))[0]["id"]
         existing_usernames.add(username)
 
-        # Parse resume content
-        ext = get_extension(filename)
-        if ext == "pdf":
-            content = parse_pdf(file_path)
-        else:
-            content = parse_docx(file_path)
+        content = parse_pdf(file_path)
 
-        # Insert resume
         dbe("INSERT INTO resumes (user_id, name, role, content, file_path) VALUES (?, ?, ?, ?, ?)",
             (user_id, full_name, "", content, file_path))
 
@@ -126,7 +104,7 @@ def main():
         imported += 1
 
     print(f"\nDone! Imported {imported} resume(s).")
-    print(f"You can log in as any dummy user with password 'password'.")
+    print("You can log in as any dummy user with password 'password'.")
 
 
 if __name__ == "__main__":

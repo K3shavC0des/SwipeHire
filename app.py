@@ -5,7 +5,7 @@ from flask import Flask, jsonify, redirect, render_template, request, session, s
 from flask_session import Session
 from werkzeug.security import check_password_hash, generate_password_hash
 from werkzeug.utils import secure_filename
-from helpers import loginRequired, parse_pdf, parse_docx, dbe, allowed_file, get_extension
+from helpers import loginRequired, parse_pdf, dbe, allowed_file, get_extension
 
 app = Flask(__name__)
 app.config["SESSION_PERMANENT"] = False
@@ -15,19 +15,20 @@ app.config["UPLOAD_FOLDER"] = "static/uploads"
 Session(app)
 
 
-
 @app.route("/")
 def homepage():
-
     return render_template("index.html")
+
 
 @app.route("/login", methods=["GET", "POST"])
 def loginPage():
     if request.method == "GET":
         return render_template("login.html")
     else:
-        username = request.form.get("username").lower().strip()
-        password = request.form.get("password").lower().strip()
+        username = request.form.get("username", "").lower().strip()
+        password = request.form.get("password", "").strip()
+        if not username or not password:
+            return render_template("error.html", error="Please enter username and password", pageLink="/login")
         rows = dbe("SELECT * FROM users WHERE username = ?", (username,))
         for row in rows:
             if check_password_hash(row["hash"], password):
@@ -35,90 +36,93 @@ def loginPage():
                 return redirect("/")
         return render_template("error.html", error="Invalid username or password", pageLink="/login")
 
+
 @app.route("/logout")
 def logout():
     session.clear()
     return redirect("/")
-    
+
+
 @app.route("/register", methods=["GET", "POST"])
 def registerPage():
-    
-    if request.method == "POST":
-        potUsername = request.form.get("username").lower().strip()
-        ps1 = request.form.get("ps1").lower().strip()
-        ps2 = request.form.get("ps2").lower().strip()
-        if not ps1 or not ps2 or not potUsername:
-            return render_template("error.html", error="Please fill out the values", pageLink="/register")
-        rows = dbe("SELECT username FROM users")
-        for row in rows:
-            if row["username"] == potUsername:
-                return render_template("error.html", error="Username Already Exists :(", pageLink="/register")
-
-        if ps1 != ps2:
-            return render_template("error.html", error="Please ensure the two passwords match", pageLink="/register")
-
-        dbe("INSERT INTO users (username, hash) VALUES (?, ?)", (potUsername, generate_password_hash(ps1)))
-        session["user_id"] = dbe("SELECT id FROM users WHERE username = ?", (potUsername,))[0]["id"]
-        return redirect("/")
-        
-    else:
+    if request.method == "GET":
         return render_template("register.html")
+
+    username = request.form.get("username", "").lower().strip()
+    ps1 = request.form.get("ps1", "").strip()
+    ps2 = request.form.get("ps2", "").strip()
+
+    if not username or not ps1 or not ps2:
+        return render_template("error.html", error="Please fill out all fields", pageLink="/register")
+
+    rows = dbe("SELECT id FROM users WHERE username = ?", (username,))
+    if rows:
+        return render_template("error.html", error="Username already taken", pageLink="/register")
+
+    if ps1 != ps2:
+        return render_template("error.html", error="Passwords do not match", pageLink="/register")
+
+    if len(ps1) < 4:
+        return render_template("error.html", error="Password must be at least 4 characters", pageLink="/register")
+
+    dbe("INSERT INTO users (username, hash) VALUES (?, ?)", (username, generate_password_hash(ps1)))
+    rows = dbe("SELECT id FROM users WHERE username = ?", (username,))
+    session["user_id"] = rows[0]["id"]
+    return redirect("/")
+
 
 @app.route("/add_resume", methods=["GET", "POST"])
 @loginRequired
 def addResume():
-    if request.method == "GET": return render_template("resume_upload.html")
-    else:
-        name = request.form.get("name")
-        role = request.form.get("role")
-        file = request.files["resume"]
-        f = file.filename
+    if request.method == "GET":
+        return render_template("resume_upload.html")
 
-        if not name or not role or not f or not allowed_file(f):
-            return render_template("error.html", error="Invalid input or file type", pageLink="/add_resume")
+    name = request.form.get("name", "").strip()
+    role = request.form.get("role", "").strip()
+    file = request.files.get("resume")
 
-        extension = get_extension(f)
-        unique_name = str(uuid.uuid4()) + "." + extension
-        file_path = os.path.join(app.config["UPLOAD_FOLDER"], unique_name)
-        file.save(file_path)
+    if not name or not role or not file or not file.filename:
+        return render_template("error.html", error="Please fill out all fields and choose a file", pageLink="/add_resume")
 
-        if extension == "pdf":
-            content = parse_pdf(file_path)
-        else:
-            content = parse_docx(file_path)
+    filename = secure_filename(file.filename)
+    if not allowed_file(filename):
+        return render_template("error.html", error="Only PDF files are supported", pageLink="/add_resume")
 
-        dbe("INSERT INTO resumes (user_id, name, role, content, file_path) VALUES (?, ?, ?, ?, ?)",
-            (session["user_id"], name, role, content, file_path))
+    extension = get_extension(filename)
+    unique_name = str(uuid.uuid4()) + "." + extension
+    file_path = os.path.join(app.config["UPLOAD_FOLDER"], unique_name)
+    file.save(file_path)
 
-        return redirect("/")
-
+    content = parse_pdf(file_path)
+    dbe("INSERT INTO resumes (user_id, name, role, content, file_path) VALUES (?, ?, ?, ?, ?)",
+        (session["user_id"], name, role, content, file_path))
+    return redirect("/")
 
 
 @app.route("/resume/<int:resume_id>")
 def resumeView(resume_id):
-    rows = dbe("SELECT file_path FROM resumes WHERE id = ?", (resume_id,))
+    rows = dbe("SELECT name, role, content, file_path FROM resumes WHERE id = ?", (resume_id,))
     if not rows:
         return "Resume not found", 404
-    resp = send_file(rows[0]["file_path"])
+    r = rows[0]
+    resp = send_file(r["file_path"])
     resp.headers.pop("Content-Disposition", None)
     return resp
+
 
 @app.route("/swipe")
 @loginRequired
 def swipePage():
     return render_template("swipe.html")
 
-@app.route("/leaderboard")
-@loginRequired
-def leaderboardPage():
-    return render_template("leaderboard.html")
 
-@app.route("/profile", methods=["GET", "POST"])
+@app.route("/profile")
 @loginRequired
 def profilePage():
-    if request.method == "GET":
-        username = dbe("SELECT username FROM users WHERE id = ?", (session["user_id"],))[0]["username"]
-        return render_template("profile.html", ProfileName=username)
+    rows = dbe("SELECT username FROM users WHERE id = ?", (session["user_id"],))
+    username = rows[0]["username"] if rows else "Unknown"
+    resumes = dbe("SELECT id, name, role, created_at FROM resumes WHERE user_id = ? ORDER BY created_at DESC", (session["user_id"],))
+    return render_template("profile.html", ProfileName=username, resumes=resumes)
 
 
 @app.route("/api/next-resume")
@@ -135,8 +139,7 @@ def nextResume():
 
     if rows:
         r = rows[0]
-        file_path = "/" + r["file_path"]
-        return jsonify({"id": r["id"], "name": r["name"], "role": r["role"], "file_path": file_path})
+        return jsonify({"id": r["id"], "name": r["name"], "role": r["role"], "file_path": "/" + r["file_path"]})
     return jsonify({"done": True})
 
 
@@ -149,6 +152,7 @@ def swipe():
     dbe("INSERT INTO swipes (user_id, resume_id, decision) VALUES (?, ?, ?)",
         (session["user_id"], resume_id, decision))
     return jsonify({"ok": True})
+
 
 @app.route("/api/reset-swipes", methods=["POST"])
 @loginRequired
