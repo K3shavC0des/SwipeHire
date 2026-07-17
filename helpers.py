@@ -12,6 +12,16 @@ def get_db():
     return conn
 
 
+def dbe(query, params=()):
+    db = get_db()
+    try:
+        cursor = db.execute(query, params)
+        db.commit()
+        return cursor.fetchall()
+    finally:
+        db.close()
+
+
 def parse_pdf(filepath):
     text = ""
     with open(filepath, "rb") as f:
@@ -24,8 +34,7 @@ def parse_pdf(filepath):
 def allowed_file(filename):
     if "." not in filename:
         return False
-    extension = filename.rsplit(".", 1)[1].lower()
-    return extension in ALLOWED_EXTENSIONS
+    return filename.rsplit(".", 1)[1].lower() in ALLOWED_EXTENSIONS
 
 
 def get_extension(filename):
@@ -38,14 +47,4 @@ def loginRequired(f):
         if session.get("user_id") is None:
             return render_template("error.html", error="Please log in first", pageLink="/login")
         return f(*args, **kwargs)
-
     return login_required
-
-
-def dbe(query, params=()):
-    db = get_db()
-    cursor = db.execute(query, params)
-    db.commit()
-    rows = cursor.fetchall()
-    db.close()
-    return rows

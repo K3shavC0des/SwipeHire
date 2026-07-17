@@ -3,6 +3,7 @@ import random
 import sqlite3
 from PyPDF2 import PdfReader
 from werkzeug.security import generate_password_hash
+from helpers import dbe
 
 UPLOAD_FOLDER = "static/uploads"
 
@@ -23,19 +24,36 @@ LAST_NAMES = [
 ]
 
 
-def get_db():
+def init_db():
     conn = sqlite3.connect("swipehire.db")
-    conn.row_factory = sqlite3.Row
-    return conn
-
-
-def dbe(query, params=()):
-    db = get_db()
-    cursor = db.execute(query, params)
-    db.commit()
-    rows = cursor.fetchall()
-    db.close()
-    return rows
+    conn.executescript("""
+        CREATE TABLE IF NOT EXISTS users (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            username TEXT UNIQUE NOT NULL,
+            hash TEXT NOT NULL
+        );
+        CREATE TABLE IF NOT EXISTS resumes (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            user_id INTEGER NOT NULL,
+            name TEXT NOT NULL,
+            role TEXT,
+            content TEXT,
+            file_path TEXT,
+            created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+            FOREIGN KEY (user_id) REFERENCES users(id)
+        );
+        CREATE TABLE IF NOT EXISTS swipes (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            user_id INTEGER NOT NULL,
+            resume_id INTEGER NOT NULL,
+            decision TEXT NOT NULL,
+            created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+            FOREIGN KEY (user_id) REFERENCES users(id),
+            FOREIGN KEY (resume_id) REFERENCES resumes(id)
+        );
+    """)
+    conn.commit()
+    conn.close()
 
 
 def parse_pdf(filepath):
@@ -63,6 +81,8 @@ def generate_unique_username(base, existing):
 
 
 def main():
+    init_db()
+
     existing_usernames = {row["username"] for row in dbe("SELECT username FROM users")}
     existing_paths = {row["file_path"] for row in dbe("SELECT file_path FROM resumes")}
 
@@ -100,7 +120,7 @@ def main():
         dbe("INSERT INTO resumes (user_id, name, role, content, file_path) VALUES (?, ?, ?, ?, ?)",
             (user_id, full_name, "", content, file_path))
 
-        print(f"  Created '{full_name}' (username: {username}) → {filename}")
+        print(f"  Created '{full_name}' (username: {username}) \u2192 {filename}")
         imported += 1
 
     print(f"\nDone! Imported {imported} resume(s).")

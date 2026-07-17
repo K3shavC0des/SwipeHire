@@ -1,17 +1,16 @@
 import os
 import uuid
 
-from flask import Flask, jsonify, redirect, render_template, request, session, send_file, Response
+from flask import Flask, jsonify, redirect, render_template, request, session, send_file
 from flask_session import Session
 from werkzeug.security import check_password_hash, generate_password_hash
 from werkzeug.utils import secure_filename
-from helpers import loginRequired, parse_pdf, dbe, allowed_file, get_extension
+from helpers import loginRequired, dbe, parse_pdf, allowed_file, get_extension
 
 app = Flask(__name__)
 app.config["SESSION_PERMANENT"] = False
 app.config["SESSION_TYPE"] = "filesystem"
 app.secret_key = os.urandom(24)
-app.config["UPLOAD_FOLDER"] = "static/uploads"
 Session(app)
 
 
@@ -71,6 +70,14 @@ def registerPage():
     return redirect("/")
 
 
+@app.route("/profile")
+@loginRequired
+def profilePage():
+    resumes = dbe("SELECT id, name, role FROM resumes WHERE user_id = ?", (session["user_id"],))
+    username = dbe("SELECT username FROM users WHERE id = ?", (session["user_id"],))[0]["username"]
+    return render_template("profile.html", ProfileName=username, resumes=resumes)
+
+
 @app.route("/add_resume", methods=["GET", "POST"])
 @loginRequired
 def addResume():
@@ -90,7 +97,7 @@ def addResume():
 
     extension = get_extension(filename)
     unique_name = str(uuid.uuid4()) + "." + extension
-    file_path = os.path.join(app.config["UPLOAD_FOLDER"], unique_name)
+    file_path = os.path.join("static", "uploads", unique_name)
     file.save(file_path)
 
     content = parse_pdf(file_path)
@@ -100,14 +107,13 @@ def addResume():
 
 
 @app.route("/resume/<int:resume_id>")
+@loginRequired
 def resumeView(resume_id):
     rows = dbe("SELECT name, role, content, file_path FROM resumes WHERE id = ?", (resume_id,))
     if not rows:
         return "Resume not found", 404
     r = rows[0]
-    resp = send_file(r["file_path"])
-    resp.headers.pop("Content-Disposition", None)
-    return resp
+    return send_file(r["file_path"])
 
 
 @app.route("/swipe")
