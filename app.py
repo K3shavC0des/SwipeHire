@@ -113,7 +113,7 @@ def resumeView(resume_id):
     if not rows:
         return "Resume not found", 404
     r = rows[0]
-    return send_file(r["file_path"])
+    return send_file(os.path.join(app.root_path, r["file_path"]))
 
 
 @app.route("/swipe")
