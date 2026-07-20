@@ -1,9 +1,5 @@
 # SwipeHire
 
-#### Video Demo:  https://www.youtube.com/watch?v=Ak4PLhVCrDc
-
-edX: _KeshavKumar_
-
 #### Description:
 
 SwipeHire is a web application that puts you in the recruiter's seat. people can create accounts, upload PDF resumes, and then review candidates in a full-screen Tinder-style interface. They may reject some and mark others for interview. It was built as the final project for CS50x.
